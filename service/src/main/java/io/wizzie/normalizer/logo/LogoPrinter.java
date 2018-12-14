@@ -1,8 +1,15 @@
 package io.wizzie.normalizer.logo;
 
+import io.wizzie.normalizer.builder.Builder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class LogoPrinter {
-    public static void PrintLogo(){
-        System.out.println("                                                 .         \n" +
+    private static final Logger log = LoggerFactory.getLogger(Builder.class);
+
+    public static void PrintLogo() {
+        log.info("\n" +
+                "                                                 .         \n" +
                 "                                                //.        \n" +
                 "                                               ////        \n" +
                 "                                         ****///////////** \n" +
@@ -26,6 +33,7 @@ public class LogoPrinter {
                 "         ********              .*******,                   \n" +
                 "          *****,                ,*****.                    \n" +
                 "          ****                   ****                      \n" +
-                "           *,                     **                       \n");
+                "           *,                     **                       \n" +
+                "\n");
     }
 }
