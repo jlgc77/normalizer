@@ -7,7 +7,6 @@ import io.wizzie.metrics.MetricsConstant;
 import io.wizzie.metrics.MetricsManager;
 import io.wizzie.normalizer.base.builder.config.ConfigProperties;
 import io.wizzie.normalizer.base.utils.Utils;
-import io.wizzie.normalizer.exceptions.PlanBuilderException;
 import io.wizzie.normalizer.model.PlanModel;
 import io.wizzie.normalizer.serializers.JsonSerde;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -21,7 +20,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
-import java.io.IOException;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -166,53 +164,57 @@ public class Builder implements Listener {
             streams.close(Duration.ofMinutes(1));
             log.info("Clean Normalizer process");
         }
-
         try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            PlanModel model = objectMapper.readValue(streamConfig, PlanModel.class);
-            log.info("Execution plan: {}", model.printExecutionPlan());
-            log.info("-------- TOPOLOGY BUILD START --------");
-            StreamsBuilder builder = streamBuilder.builder(model);
-            log.info("--------  TOPOLOGY BUILD END  --------");
+            if (streamConfig == null && streams != null) {
+                log.info("-------- STOPPED NORMALIZER PROCESSING --------");
+                streams = null;
+            } else if (streamConfig != null) {
+                ObjectMapper objectMapper = new ObjectMapper();
+                PlanModel model = objectMapper.readValue(streamConfig, PlanModel.class);
+                log.info("Execution plan: {}", model.printExecutionPlan());
+                log.info("-------- TOPOLOGY BUILD START --------");
+                StreamsBuilder builder = streamBuilder.builder(model);
+                log.info("--------  TOPOLOGY BUILD END  --------");
 
-            Config configWithNewAppId = config.clone();
-            String appId = configWithNewAppId.get(APPLICATION_ID_CONFIG);
-            configWithNewAppId.put(APPLICATION_ID_CONFIG, String.format("%s_%s", appId, "normalizer"));
-            configWithNewAppId.put(CLIENT_ID_CONFIG, String.format("%s_%s", appId, "normalizer"));
+                Config configWithNewAppId = config.clone();
+                String appId = configWithNewAppId.get(APPLICATION_ID_CONFIG);
+                configWithNewAppId.put(APPLICATION_ID_CONFIG, String.format("%s_%s", appId, "normalizer"));
+                configWithNewAppId.put(CLIENT_ID_CONFIG, String.format("%s_%s", appId, "normalizer"));
 
-            Properties properties = configWithNewAppId.getProperties();
+                Properties properties = configWithNewAppId.getProperties();
 
-            properties.put(StreamsConfig.producerPrefix(ProducerConfig.RETRIES_CONFIG), Integer.MAX_VALUE);
-            properties.put(StreamsConfig.producerPrefix(ProducerConfig.MAX_BLOCK_MS_CONFIG), Integer.MAX_VALUE);
-            properties.put(StreamsConfig.REQUEST_TIMEOUT_MS_CONFIG, 305000);
-            properties.put(StreamsConfig.consumerPrefix(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG),
-                    Integer.MAX_VALUE);
+                properties.put(StreamsConfig.producerPrefix(ProducerConfig.RETRIES_CONFIG), Integer.MAX_VALUE);
+                properties.put(StreamsConfig.producerPrefix(ProducerConfig.MAX_BLOCK_MS_CONFIG), Integer.MAX_VALUE);
+                properties.put(StreamsConfig.REQUEST_TIMEOUT_MS_CONFIG, 305000);
+                properties.put(StreamsConfig.consumerPrefix(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG),
+                        Integer.MAX_VALUE);
 
-            properties.put(StreamsConfig.TOPOLOGY_OPTIMIZATION, "all");
+                properties.put(StreamsConfig.TOPOLOGY_OPTIMIZATION, "all");
 
-            streams = new KafkaStreams(builder.build(), properties);
+                streams = new KafkaStreams(builder.build(), properties);
 
-            streams.setUncaughtExceptionHandler((thread, exception) -> {
-                log.error(exception.getMessage(), exception);
-
-                try {
-                    log.info("Stopping normalizer service");
-                    close();
-                    log.info("Closing normalizer service");
-                } catch (Exception e) {
+                streams.setUncaughtExceptionHandler((thread, exception) -> {
                     log.error(exception.getMessage(), exception);
-                }
-            });
 
-            streams.cleanUp();
-            streams.start();
+                    try {
+                        log.info("Stopping normalizer service");
+                        close();
+                        log.info("Closing normalizer service");
+                    } catch (Exception e) {
+                        log.error(exception.getMessage(), exception);
+                    }
+                });
 
-            registerKafkaMetrics(config, metricsManager);
+                streams.cleanUp();
+                streams.start();
 
-            streamMonitor = new Thread(new StreamMonitor(this));
-            streamMonitor.start();
+                registerKafkaMetrics(config, metricsManager);
 
-            log.info("Started Normalizer with conf {}", config.getProperties());
+                streamMonitor = new Thread(new StreamMonitor(this));
+                streamMonitor.start();
+
+                log.info("Started Normalizer with conf {}", config.getProperties());
+            }
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
