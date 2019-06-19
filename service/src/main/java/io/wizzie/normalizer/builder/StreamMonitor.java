@@ -13,18 +13,24 @@ public class StreamMonitor extends Thread {
 
     KafkaStreams streams;
     Builder builder;
+    boolean isMonitoring = false;
 
     public StreamMonitor(Builder builder) {
         this.streams = builder.streams;
         this.builder = builder;
     }
 
+    public void close() {
+        log.info("Stopping Stream Monitor thread");
+        isMonitoring = false;
+        this.interrupt();
+    }
+
     @Override
     public void run() {
-        boolean monitoring = true;
         log.info("Start Stream Monitor thread.");
-
-        while (monitoring && !isInterrupted()) {
+        isMonitoring = true;
+        while (isMonitoring) {
             if (streams.state().isRunning()) {
                 List<Boolean> streamsRunning = streams.localThreadsMetadata()
                         .stream()
@@ -40,7 +46,7 @@ public class StreamMonitor extends Thread {
                         log.error(e.getMessage(), e);
                     }
 
-                    monitoring = false;
+                    isMonitoring = false;
                 } else {
                     try {
                         Thread.sleep(60000);

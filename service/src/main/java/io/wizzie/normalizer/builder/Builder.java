@@ -36,7 +36,7 @@ public class Builder implements Listener {
     StreamBuilder streamBuilder;
     MetricsManager metricsManager;
     Bootstrapper bootstrapper;
-    Thread streamMonitor;
+    StreamMonitor streamMonitor;
     volatile boolean closed = false;
 
     public Builder(Config config) throws Exception {
@@ -70,6 +70,7 @@ public class Builder implements Listener {
             metricsManager.interrupt();
             streamBuilder.close();
             bootstrapper.close();
+            streamMonitor.close();
             if (streams != null && streams.state().isRunning()) streams.close(Duration.ofMinutes(1));
             log.info("Closed builder.");
             closed = true;
@@ -160,13 +161,14 @@ public class Builder implements Listener {
         if (streams != null) {
             metricsManager.clean();
             streamBuilder.close();
-            streamMonitor.interrupt();
+            streamMonitor.close();
             streams.close(Duration.ofMinutes(1));
             log.info("Clean Normalizer process");
         }
         try {
             if (streamConfig == null && streams != null) {
                 log.info("-------- STOPPED NORMALIZER PROCESSING --------");
+                streamMonitor.close();
                 streams = null;
             } else if (streamConfig != null) {
                 ObjectMapper objectMapper = new ObjectMapper();
@@ -209,8 +211,7 @@ public class Builder implements Listener {
                 streams.start();
 
                 registerKafkaMetrics(config, metricsManager);
-
-                streamMonitor = new Thread(new StreamMonitor(this));
+                streamMonitor = new StreamMonitor(this);
                 streamMonitor.start();
 
                 log.info("Started Normalizer with conf {}", config.getProperties());
