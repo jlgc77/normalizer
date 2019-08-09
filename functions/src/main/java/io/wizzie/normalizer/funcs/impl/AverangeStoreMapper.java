@@ -14,8 +14,8 @@ import static io.wizzie.normalizer.base.utils.Constants.__KEY;
 
 public class AverangeStoreMapper extends MapperStoreFunction {
 	List<String> counterFields;
-	KeyValueStore<String, Map<String, Long>> storeCounter;
-	KeyValueStore<String, Map<String, Long>> storeMeans;
+	KeyValueStore<String, Map<String, Double>> storeCounter;
+	KeyValueStore<String, Map<String, Double>> storeMeans;
 	Boolean sendIfZero;
 	String timestampField;
 	Integer iteration;
@@ -38,7 +38,7 @@ public class AverangeStoreMapper extends MapperStoreFunction {
 	@Override
 	public KeyValue<String, Map<String, Object>> process(String key, Map<String, Object> value) {
 
-		Map<String, Long> means = storeMeans.get(key);
+		Map<String, Double> means = storeMeans.get(key);
 		if (means == null) {
 			means = new HashMap<>();
 		}
@@ -49,11 +49,11 @@ public class AverangeStoreMapper extends MapperStoreFunction {
 		if (value != null) {
 			definedKey = key;
 
-			Map<String, Long> newCounters = new HashMap<>();
-			Map<String, Long> newTimestamp = new HashMap<>();
+			Map<String, Double> newCounters = new HashMap<>();
+			Map<String, Double> newTimestamp = new HashMap<>();
 
 			for (String counterField : counterFields) {
-				Long counter = ConversionUtils.toLong(value.remove(counterField));
+				Double counter = ConversionUtils.toDouble(value.remove(counterField));
 				if (counter != null) {
 					newCounters.put(counterField, counter);
 					if (means.get(counterField) == null) {
@@ -63,29 +63,28 @@ public class AverangeStoreMapper extends MapperStoreFunction {
 				}
 			}
 
-			Long timestampValue = ConversionUtils.toLong(value.get(timestampField));
+			Double timestampValue = ConversionUtils.toDouble(value.get(timestampField));
 
 			if (timestampValue != null) {
 				newTimestamp.put(timestampField, timestampValue);
 			} else {
-				timestampValue = System.currentTimeMillis() / 1000;
+				timestampValue = (double) (System.currentTimeMillis() / 1000);
 				value.put(timestampField, timestampValue);
 				newTimestamp.put(timestampField, timestampValue);
 			}
 
-			Map<String, Long> counters = storeCounter.get(definedKey);
+			Map<String, Double> counters = storeCounter.get(definedKey);
 
 			if (counters != null) {
 
-				for (Map.Entry<String, Long> counter : newCounters.entrySet()) {
+				for (Map.Entry<String, Double> counter : newCounters.entrySet()) {
 					Long lastValue = ConversionUtils.toLong(counters.get(counter.getKey()));
 					if (lastValue != null) {
 						// mean += (value - oldMean) / n
-						Long mean = means.get(counter.getKey());
-						Long newValue = counter.getValue();
-						Long oldValue = lastValue;
+						Double oldMean = means.get(counter.getKey());
+						Double newValue = counter.getValue();
 
-						Long newMean = mean + ((newValue - oldValue) / iteration);
+						Double newMean = oldMean + ((newValue - oldMean) / iteration);
 
 						value.put(counter.getKey(), newMean);
 						means.put(counter.getKey(), newMean);

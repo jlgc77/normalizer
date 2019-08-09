@@ -81,14 +81,14 @@ public class AverangeStoreMapperUnitTest {
 		expected1.put("A", "VALUE-A");
 		expected1.put("B", "VALUE-B");
 		expected1.put("C", 1234567890L);
-		message1.put("X", 5L);
+		message1.put("X", 5.0);
 		expected1.put("time", 1122334455L);
 
 		Map<String, Object> expected2 = new HashMap<>();
 		expected2.put("A", "VALUE-A");
 		expected2.put("B", "VALUE-B");
 		expected2.put("C", 1234567890L);
-		expected2.put("X", 3L);
+		expected2.put("X", 3.0);
 		expected2.put("time", 1122334555L);
 		expected2.put("last_timestamp", 1122334455L);
 
@@ -96,7 +96,7 @@ public class AverangeStoreMapperUnitTest {
 		expected3.put("A", "VALUE-A");
 		expected3.put("B", "VALUE-B");
 		expected3.put("C", 1234567890L);
-		expected3.put("X", 5L);
+		expected3.put("X", 4.333333333333333);
 		expected3.put("time", 1122334655L);
 		expected3.put("last_timestamp", 1122334555L);
 
