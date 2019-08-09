@@ -1,0 +1,23 @@
+{
+  "inputs":{
+    "topic1":["stream1"]
+  },
+  "streams":{
+    "stream1":{
+      "funcs":[
+        {
+          "name":"averangeMapper",
+          "className":"io.wizzie.normalizer.funcs.impl.AverangeStoreMapper",
+          "properties": {
+            "counters": ["X"],
+            "timestamp": "time"
+          },
+          "stores":["counter-store","means-store"]
+        }
+      ],
+      "sinks":[
+        {"topic":"output"}
+      ]
+    }
+  }
+}
