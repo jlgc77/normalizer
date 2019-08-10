@@ -6,10 +6,10 @@
     "stream1":{
       "funcs":[
         {
-          "name":"averangeMapper",
-          "className":"io.wizzie.normalizer.funcs.impl.AverangeStoreMapper",
+          "name":"meanMapper",
+          "className":"io.wizzie.normalizer.funcs.impl.MeanStoreMapper",
           "properties": {
-            "counters": ["X"],
+            "counters": ["X","Y","Z"],
             "timestamp": "time"
           },
           "stores":["counter-store","means-store"]

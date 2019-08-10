@@ -1,18 +1,17 @@
 package io.wizzie.normalizer.funcs.impl;
 
-import io.wizzie.metrics.MetricsManager;
-import io.wizzie.normalizer.base.utils.ConversionUtils;
-import io.wizzie.normalizer.funcs.MapperStoreFunction;
-import org.apache.kafka.streams.KeyValue;
-import org.apache.kafka.streams.state.KeyValueStore;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static io.wizzie.normalizer.base.utils.Constants.__KEY;
+import org.apache.kafka.streams.KeyValue;
+import org.apache.kafka.streams.state.KeyValueStore;
 
-public class AverangeStoreMapper extends MapperStoreFunction {
+import io.wizzie.metrics.MetricsManager;
+import io.wizzie.normalizer.base.utils.ConversionUtils;
+import io.wizzie.normalizer.funcs.MapperStoreFunction;
+
+public class MeanStoreMapper extends MapperStoreFunction {
 	List<String> counterFields;
 	KeyValueStore<String, Map<String, Double>> storeCounter;
 	KeyValueStore<String, Map<String, Double>> storeMeans;
@@ -20,12 +19,12 @@ public class AverangeStoreMapper extends MapperStoreFunction {
 	String timestampField;
 	Integer iteration;
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public void prepare(Map<String, Object> properties, MetricsManager metricsManager) {
 		counterFields = (List<String>) properties.get("counters");
 		storeCounter = getStore("counter-store");
 		storeMeans = getStore("means-store");
-		sendIfZero = (Boolean) properties.get("sendIfZero");
 		timestampField = String.valueOf(properties.get("timestamp"));
 
 		if (sendIfZero == null)
@@ -100,6 +99,9 @@ public class AverangeStoreMapper extends MapperStoreFunction {
 				returnValue = new KeyValue<>(key, value);
 				counters.putAll(newCounters);
 			} else {
+				for (Map.Entry<String, Double> counter : newCounters.entrySet()) {
+					value.put(counter.getKey(), counter.getValue());
+				}
 				returnValue = new KeyValue<>(key, value);
 				counters = newCounters;
 			}
@@ -109,7 +111,7 @@ public class AverangeStoreMapper extends MapperStoreFunction {
 
 			return returnValue;
 		} else {
-			return new KeyValue<>(null, null);
+			return new KeyValue<>(key, value);
 		}
 	}
 
@@ -122,10 +124,9 @@ public class AverangeStoreMapper extends MapperStoreFunction {
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
-		builder.append(" {").append("counters: ").append(counterFields).append(", ").append("sendIfZero: ")
-				.append(sendIfZero).append(", ").append("stores: ").append(storeCounter.name()).append(", ")
-				.append("timestamp: ").append(timestampField).append(", ").append("keys: ").append("firstTimeView: ")
-				.append("} ");
+		builder.append(" {").append("counters: ").append(counterFields).append(", ").append("sendIfZero: ").append(", ")
+				.append("stores: ").append(storeCounter.name()).append(", ").append("timestamp: ")
+				.append(timestampField).append(", ").append("keys: ").append("firstTimeView: ").append("} ");
 
 		return builder.toString();
 	}
